@@ -2,7 +2,17 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<!-- v0.3.2: full-screen phone shell (edge-to-edge, notch-safe, no zoom/scroll) -->
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<meta name="apple-mobile-web-app-title" content="Cat Party">
+		<meta name="application-name" content="Cat Party">
+		<meta name="theme-color" content="#FF8FAB">
+		<meta name="format-detection" content="telephone=no">
+		<link rel="manifest" href="manifest.webmanifest">
+		<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 		<title>CAT PARTY</title>
 		<style>
 html, body, #canvas {
@@ -11,15 +21,34 @@ html, body, #canvas {
 	border: 0;
 }
 
-body {
-	color: white;
-	background-color: black;
+html, body {
+	width: 100%;
+	height: 100%;
 	overflow: hidden;
+	overscroll-behavior: none;
+	background-color: #FFE5EC;
+}
+
+body {
+	position: fixed;
+	inset: 0;
+	color: #5a3a48;
 	touch-action: none;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+	font-family: -apple-system, 'Segoe UI', 'Noto Sans', Arial, sans-serif;
 }
 
 #canvas {
 	display: block;
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	touch-action: none;
 }
 
 #canvas:focus {
@@ -38,7 +67,7 @@ body {
 }
 
 #status {
-	background-color: #242424;
+	background-color: #FFE5EC;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
@@ -57,9 +86,11 @@ body {
 }
 
 #status-progress {
-	bottom: 10%;
+	bottom: 12%;
 	width: 50%;
+	height: 14px;
 	margin: 0 auto;
+	accent-color: #FF6B9D;
 }
 
 #status-notice {
@@ -67,7 +98,6 @@ body {
 	border-radius: 0.5rem;
 	border: 1px solid #9b3943;
 	color: #e0e0e0;
-	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
 	line-height: 1.3;
 	margin: 0 2rem;
 	overflow: hidden;
@@ -75,12 +105,66 @@ body {
 	text-align: center;
 	z-index: 1;
 }
+
+#a2hs {
+	display: none;
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	bottom: calc(3% + env(safe-area-inset-bottom));
+	background: rgba(255, 255, 255, 0.9);
+	border-radius: 14px;
+	padding: 8px 14px;
+	font-size: 14px;
+	color: #6b3a52;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+	white-space: nowrap;
+}
+
+#rotate {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 20;
+	background: rgba(255, 229, 236, 0.92);
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+}
+#rotate svg {
+	width: 38vw;
+	max-width: 180px;
+	animation: turn 2.2s ease-in-out infinite;
+}
+#rotate .x {
+	margin-top: 5vh;
+	font-size: 15px;
+	color: #9a6278;
+	opacity: 0.8;
+}
+@keyframes turn {
+	0%, 20% { transform: rotate(0deg); }
+	55%, 80% { transform: rotate(-90deg); }
+	100% { transform: rotate(0deg); }
+}
+@media (orientation: portrait) and (pointer: coarse) {
+	body.rotate-on #rotate { display: flex; }
+}
+#safe-probe {
+	position: fixed;
+	visibility: hidden;
+	pointer-events: none;
+	padding-left: env(safe-area-inset-left);
+	padding-top: env(safe-area-inset-top);
+	padding-right: env(safe-area-inset-right);
+	padding-bottom: env(safe-area-inset-bottom);
+}
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 
 	</head>
-	<body>
+	<body class="rotate-on">
 		<canvas id="canvas">
 			Your browser does not support the canvas tag.
 		</canvas>
@@ -93,11 +177,117 @@ body {
 			<img id="status-splash" src="index.png" alt="">
 			<progress id="status-progress"></progress>
 			<div id="status-notice"></div>
+			<div id="a2hs">iPhone: tap Share ⬆︎ → “Add to Home Screen” for full screen</div>
 		</div>
+
+		<!-- Portrait on a phone: friendly "turn me sideways" picture (tap to hide) -->
+		<div id="rotate" aria-label="Turn your phone sideways">
+			<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+				<rect x="30" y="10" width="40" height="80" rx="8" fill="#FF8FAB" stroke="#6b3a52" stroke-width="3"/>
+				<rect x="35" y="18" width="30" height="62" rx="3" fill="#FFF8F0"/>
+				<circle cx="50" cy="44" r="10" fill="#FFB347"/>
+				<polygon points="42,38 40,28 47,35" fill="#FFB347"/>
+				<polygon points="58,38 60,28 53,35" fill="#FFB347"/>
+				<circle cx="46" cy="43" r="1.8" fill="#2D2A32"/>
+				<circle cx="54" cy="43" r="1.8" fill="#2D2A32"/>
+				<ellipse cx="50" cy="47" rx="1.6" ry="1.1" fill="#FF6B9D"/>
+			</svg>
+			<div class="x">↻ &nbsp; tap to keep playing</div>
+		</div>
+		<div id="safe-probe"></div>
+
+		<script>
+// ---- v0.3.2 phone helpers (fullscreen, orientation lock, safe areas) ----
+(function () {
+	const docEl = document.documentElement;
+	// Home-screen app (iOS standalone / installed PWA). Note: "display-mode: fullscreen" also
+	// matches while the Fullscreen API is active, so it is deliberately not used here.
+	const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+		window.navigator.standalone === true;
+	const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+	const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+		(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+	const fsEnabled = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+
+	function isFullscreen() {
+		return !!(document.fullscreenElement || document.webkitFullscreenElement);
+	}
+	function lockLandscape() {
+		try {
+			if (screen.orientation && screen.orientation.lock) {
+				screen.orientation.lock('landscape').catch(function () {});
+			}
+		} catch (e) { /* not supported */ }
+	}
+	function enterFullscreen() {
+		if (!fsEnabled || isFullscreen()) { lockLandscape(); return; }
+		let p = null;
+		try {
+			if (docEl.requestFullscreen) {
+				p = docEl.requestFullscreen({ navigationUI: 'hide' });
+			} else if (docEl.webkitRequestFullscreen) {
+				p = docEl.webkitRequestFullscreen();
+			}
+		} catch (e) { p = null; }
+		if (p && p.then) {
+			p.then(lockLandscape).catch(function () {});
+		} else {
+			lockLandscape();
+		}
+	}
+	function exitFullscreen() {
+		try {
+			if (document.exitFullscreen) { document.exitFullscreen().catch(function () {}); }
+			else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+		} catch (e) { /* ignore */ }
+	}
+
+	// First tap on a touch device: go full screen + lock landscape (Android Chrome).
+	// iOS Safari has no element fullscreen on iPhone -> Add to Home Screen instead.
+	let firstTapDone = false;
+	function onFirstTap() {
+		if (firstTapDone) { return; }
+		firstTapDone = true;
+		if (coarse && !isStandalone) { enterFullscreen(); } else if (coarse) { lockLandscape(); }
+	}
+	document.addEventListener('touchend', onFirstTap, { capture: true, passive: true });
+	document.addEventListener('click', onFirstTap, { capture: true, passive: true });
+
+	// No pinch / double-tap zoom or rubber-band scrolling.
+	document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+	document.addEventListener('dblclick', function (e) { e.preventDefault(); }, { passive: false });
+	document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1) { e.preventDefault(); } }, { passive: false });
+
+	// Rotate hint: tap to dismiss for this session.
+	const rot = document.getElementById('rotate');
+	rot.addEventListener('click', function () { document.body.classList.remove('rotate-on'); });
+
+	if (isIOS && !isStandalone) {
+		document.getElementById('a2hs').style.display = 'block';
+	}
+
+	function safeArea() {
+		const cs = getComputedStyle(document.getElementById('safe-probe'));
+		const v = function (k) { return parseFloat(cs[k]) || 0; };
+		return [v('paddingLeft'), v('paddingTop'), v('paddingRight'), v('paddingBottom'),
+			window.innerWidth, window.innerHeight].join(',');
+	}
+
+	// Bridge for Godot (JavaScriptBridge.eval)
+	window.catParty = {
+		safeArea: safeArea,
+		canFullscreen: function () { return fsEnabled && !isStandalone; },
+		isFullscreen: isFullscreen,
+		toggleFullscreen: function () { if (isFullscreen()) { exitFullscreen(); } else { enterFullscreen(); } },
+		isStandalone: function () { return isStandalone; },
+		isIOS: function () { return isIOS; },
+	};
+}());
+		</script>
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":751056,"index.wasm":35376909},"focusCanvas":true,"gdextensionLibs":[]};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":5910928,"index.wasm":35376909},"focusCanvas":true,"gdextensionLibs":[]};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -153,29 +343,8 @@ const engine = new Engine(GODOT_CONFIG);
 	});
 
 	if (missing.length !== 0) {
-		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
-			// There's a chance that installing the service worker would fix the issue
-			Promise.race([
-				navigator.serviceWorker.getRegistration().then((registration) => {
-					if (registration != null) {
-						return Promise.reject(new Error('Service worker already exists.'));
-					}
-					return registration;
-				}).then(() => engine.installServiceWorker()),
-				// For some reason, `getRegistration()` can stall
-				new Promise((resolve) => {
-					setTimeout(() => resolve(), 2000);
-				}),
-			]).catch((err) => {
-				console.error('Error while registering service worker:', err);
-			}).then(() => {
-				window.location.reload();
-			});
-		} else {
-			// Display the message as usual
-			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
-			displayFailureNotice(missingMsg + missing.join('\n'));
-		}
+		const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
+		displayFailureNotice(missingMsg + missing.join('\n'));
 	} else {
 		setStatusMode('progress');
 		engine.startGame({
